@@ -1,35 +1,21 @@
 import cv2
-import os
-
-def test_video_playback(video_path):
-    if not os.path.exists(video_path):
-        print("Error: Video file not found.")
-        return
-
-    cap = cv2.VideoCapture(video_path)
-
-    if not cap.isOpened():
-        print("Error: Could not open video.")
-        return
-
-    print("Video opened successfully.")
-
-    while True:
-        ret, frame = cap.read()
-
-        if not ret:
-            print("End of video reached.")
-            break
-
-        cv2.imshow("Phase 0 - Video Test", frame)
-
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
 
 
-if __name__ == "__main__":
-    video_path = "data/raw/drive.mov"
-    test_video_playback(video_path)
+class VideoLoader:
+    def __init__(self, video_path):
+        self.video_path = video_path
+        self.cap = cv2.VideoCapture(video_path)
+
+        if not self.cap.isOpened():
+            raise ValueError(f"Error: Unable to open video at {video_path}")
+
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def read_frame(self):
+        ret, frame = self.cap.read()
+        return ret, frame
+
+    def release(self):
+        self.cap.release()
+        cv2.destroyAllWindows()
