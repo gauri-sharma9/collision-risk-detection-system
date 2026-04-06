@@ -16,13 +16,15 @@ def main():
     video      = VideoLoader(video_path)
     detector   = Detector()
     tracker    = Tracker()
-    estimator  = DistanceEstimator(smoothing=5)
-    speeder    = SpeedEstimator(fps=video.fps if video.fps > 0 else 30,
-                                smoothing=7)
+    estimator  = DistanceEstimator(smoothing=15)
+    speeder    = SpeedEstimator(
+                    fps=video.fps if video.fps > 0 else 30,
+                    smoothing=15
+                 )
     risk_model = RiskModel()
     visualizer = Visualizer()
 
-    prev_time = time.time()
+    prev_time  = time.time()
 
     while True:
         ret, frame = video.read_frame()
@@ -35,8 +37,7 @@ def main():
         h, w, _ = frame.shape
         filtered = [d for d in detections if d["bbox"][3] <= h * 0.85]
 
-        tracked = tracker.update(filtered)
-
+        tracked       = tracker.update(filtered)
         any_high_risk = False
 
         for det in tracked:
@@ -45,7 +46,13 @@ def main():
 
             distance = estimator.estimate(bbox, obj_id)
             speed    = speeder.estimate_speed(obj_id, distance)
-            result   = risk_model.assess(frame, bbox, distance, speed)
+
+            # Only use risk assessment once we have stable readings
+            dist_ok  = estimator.is_estimate_reliable(obj_id)
+            speed_ok = speeder.is_estimate_reliable(obj_id)
+            reliable = dist_ok and speed_ok
+
+            result = risk_model.assess(frame, bbox, distance, speed, reliable)
 
             if result["risk"] == "HIGH":
                 any_high_risk = True
@@ -53,7 +60,7 @@ def main():
             frame = visualizer.draw(frame, det, distance, speed, result)
 
         curr_time = time.time()
-        fps = 1.0 / max(curr_time - prev_time, 1e-6)
+        fps       = 1.0 / max(curr_time - prev_time, 1e-6)
         prev_time = curr_time
 
         frame = visualizer.draw_hud(frame, fps, len(tracked), any_high_risk)

@@ -5,8 +5,8 @@ class DistanceEstimator:
     FOCAL_LENGTH    = 600
     REAL_CAR_HEIGHT = 1.5
 
-    def __init__(self, smoothing=10):
-        self._history  = {}
+    def __init__(self, smoothing=15):
+        self._history   = {}
         self._smoothing = smoothing
 
     def estimate(self, bbox, obj_id=None):
@@ -26,3 +26,9 @@ class DistanceEstimator:
 
         smoothed = sum(self._history[obj_id]) / len(self._history[obj_id])
         return round(smoothed, 2)
+    
+    def is_estimate_reliable(self, obj_id):
+        """Only trust distance once we have enough history frames."""
+        if obj_id not in self._history:
+            return False
+        return len(self._history[obj_id]) >= 8
